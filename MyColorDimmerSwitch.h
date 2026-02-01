@@ -5,5 +5,8 @@
 
 class MyColorDimmerSwitch : public ZigbeeColorDimmerSwitch {
  public:
-  using ZigbeeColorDimmerSwitch::ZigbeeColorDimmerSwitch;
+  explicit MyColorDimmerSwitch(uint8_t endpoint);
+
+  // Recall a scene (non-group): sent via bindings, group_id is 0x0000.
+  void recallScene(uint8_t scene_id);
 };

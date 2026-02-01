@@ -51,22 +51,15 @@ static void onZigbeeDefaultResponse(zb_cmd_type_t resp_to_cmd, esp_zb_zcl_status
   Serial.printf("Zigbee default response: resp_to_cmd=%d status=0x%02X\n",
                 (int)resp_to_cmd,
                 (unsigned int)status);
-  if (levelToBeSet == 0) {
-    return;
-  }         
-  // delay some time
-  delay(400);
-  zbSwitch.setLightLevel(levelToBeSet);
-  levelToBeSet = 0;
+}
+
+static void onLightStateChange(bool state) {
+  Serial.printf("Light state %d\r\n", state);
 }
 
 /********************* Arduino functions **************************/
 void setup() {
   Serial.begin(115200);
-
-  // TODO add scenes cluster to the switch
-  //esp_zb_cluster_list_add_scenes_cluster(cluster_list, esp_zb_scenes_cluster_create(NULL), ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
-
 
   //Init button switch
   pinMode(button, INPUT_PULLUP);
@@ -77,6 +70,7 @@ void setup() {
 
 
   zbSwitch.onDefaultResponse(onZigbeeDefaultResponse);
+  zbSwitch.onLightStateChange(onLightStateChange);
 
   zbSwitch.setManualBinding(true);  //Set manual binding to true, so binding is done on Home Assistant side
 
@@ -158,29 +152,11 @@ void loop() {
       levelToBeSet = 0;
       zbSwitch.getLightState(); //
     } else if (command == "1") {
-        Serial.println("Recalling scene 1");
-        esp_zb_zcl_scenes_recall_scene_cmd_t recall_scene_cmd;
-        memset(&recall_scene_cmd, 0, sizeof(recall_scene_cmd));
-        recall_scene_cmd.zcl_basic_cmd.src_endpoint = SWITCH_ENDPOINT_NUMBER;
-        recall_scene_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-        recall_scene_cmd.group_id = 0x0000;
-        recall_scene_cmd.scene_id = 1; // Scene ID 1
-        
-        esp_zb_lock_acquire(portMAX_DELAY);
-        esp_zb_zcl_scenes_recall_scene_cmd_req(&recall_scene_cmd);
-        esp_zb_lock_release();
+      Serial.println("Recalling scene 1");
+      zbSwitch.recallScene(1);
     } else if (command == "2") {
-        Serial.println("Recalling scene 2");
-        esp_zb_zcl_scenes_recall_scene_cmd_t recall_scene_cmd;
-        memset(&recall_scene_cmd, 0, sizeof(recall_scene_cmd));
-        recall_scene_cmd.zcl_basic_cmd.src_endpoint = SWITCH_ENDPOINT_NUMBER;
-        recall_scene_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-        recall_scene_cmd.group_id = 0x0000;
-        recall_scene_cmd.scene_id = 2; // Scene ID 2
-        
-        esp_zb_lock_acquire(portMAX_DELAY);
-        esp_zb_zcl_scenes_recall_scene_cmd_req(&recall_scene_cmd);
-        esp_zb_lock_release();
+      Serial.println("Recalling scene 2");
+      zbSwitch.recallScene(2);
     } else if (command == "3") {
       levelToBeSet = 0;
       // requires mosquitto_pub -t zigbee2mqtt/<friendly_name>/set/level_config -m '{"execute_if_off": true}'
@@ -210,4 +186,53 @@ void loop() {
 esp_zb_lock_acquire(portMAX_DELAY);
         esp_zb_zcl_scenes_recall_scene_cmd_req(&recall_scene_cmd);
         esp_zb_lock_release();
+        */
+
+
+        /*
+        
+Kdyz nejsou v cilovem device sceny:
+0:42:31.402 -> Recalling scene 1
+20:42:31.425 -> [192832][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x8b
+20:42:31.425 -> [192834][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
+20:42:31.425 -> [192835][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Not found
+20:42:31.425 -> [192836][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
+20:42:31.425 -> Zigbee default response: resp_to_cmd=5 status=0x8B        
+
+
+kdzy tam jsou:
+20:44:11.728 -> Recalling scene 2
+20:44:11.793 -> [293189][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x0
+20:44:11.793 -> [293191][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
+20:44:11.793 -> [293192][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Success
+20:44:11.793 -> [293193][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
+20:44:11.793 -> Zigbee default response: resp_to_cmd=5 status=0x00
+
+Status response
+20:48:06.050 -> Getting light level
+20:48:06.050 -> [527481][V][ZigbeeHandlers.cpp:144] zb_cmd_read_attr_resp_handler(): Read attribute response: from address(0x3fe9) src endpoint(1) to dst endpoint(5) cluster(0x6)
+20:48:06.081 -> [527483][V][ZigbeeHandlers.cpp:153] zb_cmd_read_attr_resp_handler(): Read attribute response: status(0), cluster(0x6), attribute(0x0), type(0x10), value(0)
+https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ZigbeeHandlers.cpp#L154
+https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ep/ZigbeeColorDimmerSwitch.cpp#L829
+https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ep/ZigbeeColorDimmerSwitch.h#L81
+
+https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/examples/Zigbee_On_Off_Switch/Zigbee_On_Off_Switch.ino#L97C5-L103C43
+// Poll light state every second
+    static uint32_t lastPoll = 0;
+    if (millis() - lastPoll > 1000) {
+      lastPoll = millis();
+      zbSwitch.getLightState();
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+  zbSwitch.onLightStateChange(onLightStateChange);
+
+
+  static void onLightStateChange(bool state) {
+  if (state != light_state) {
+    light_state = state;
+    Serial.printf("Light state changed to %d\r\n", state);
+  }
+}
+
         */
