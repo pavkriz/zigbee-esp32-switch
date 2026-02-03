@@ -1,9 +1,5 @@
 #include "MyColorDimmerSwitch.h"
 
-#if CONFIG_ZB_ENABLED
-
-#include <zcl/esp_zigbee_zcl_command.h>
-
 MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
     : ZigbeeColorDimmerSwitch(endpoint) {
   // Add Scenes cluster (client role) so the endpoint can legally send Scenes commands.
@@ -57,15 +53,3 @@ void MyColorDimmerSwitch::stopDimming() {
   esp_zb_zcl_level_stop_cmd_req(&stop_cmd);
   esp_zb_lock_release();
 }
-
-#else
-
-MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
-    : ZigbeeColorDimmerSwitch(endpoint) {}
-
-void MyColorDimmerSwitch::recallScene(uint8_t /*scene_id*/) {}
-
-void MyColorDimmerSwitch::startDimming(bool /*up*/, uint8_t /*rate*/) {}
-void MyColorDimmerSwitch::stopDimming() {}
-
-#endif
