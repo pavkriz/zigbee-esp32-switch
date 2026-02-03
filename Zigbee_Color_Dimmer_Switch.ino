@@ -36,16 +36,23 @@
 #endif
 
 #include "Zigbee.h"
+#include <JC_Button.h>              // https://github.com/JChristensen/JC_Button
 
 #include "MyColorDimmerSwitch.h"
+#include "MySwitchStateMachine.h"
 
 /* Zigbee color dimmer switch configuration */
 #define SWITCH_ENDPOINT_NUMBER 5
 uint8_t button = BOOT_PIN;
 uint8_t levelToBeSet = 0;
 
+// define user-controlled buttons
+Button btnUp(1);
+Button btnDown(2);
+
 /* Zigbee switch */
 MyColorDimmerSwitch zbSwitch = MyColorDimmerSwitch(SWITCH_ENDPOINT_NUMBER);
+MySwitchStateMachine switchStateMachine = MySwitchStateMachine(zbSwitch, btnUp, btnDown);
 
 static void onZigbeeDefaultResponse(zb_cmd_type_t resp_to_cmd, esp_zb_zcl_status_t status) {
   Serial.printf("Zigbee default response: resp_to_cmd=%d status=0x%02X\n",
@@ -55,6 +62,7 @@ static void onZigbeeDefaultResponse(zb_cmd_type_t resp_to_cmd, esp_zb_zcl_status
 
 static void onLightStateChange(bool state) {
   Serial.printf("Light state %d\r\n", state);
+  switchStateMachine.onLightStateChange(state);
 }
 
 /********************* Arduino functions **************************/
@@ -71,6 +79,8 @@ void setup() {
 
   zbSwitch.onDefaultResponse(onZigbeeDefaultResponse);
   zbSwitch.onLightStateChange(onLightStateChange);
+
+  switchStateMachine.begin();
 
   zbSwitch.setManualBinding(true);  //Set manual binding to true, so binding is done on Home Assistant side
 
@@ -93,6 +103,8 @@ void setup() {
 }
 
 void loop() {
+  switchStateMachine.tick();
+
   // Handle button switch in loop()
   if (digitalRead(button) == LOW) {  // Push button pressed
     // Key debounce handling
@@ -181,58 +193,3 @@ void loop() {
     zbSwitch.printBoundDevices(Serial);
   }
 }
-
-/*
-esp_zb_lock_acquire(portMAX_DELAY);
-        esp_zb_zcl_scenes_recall_scene_cmd_req(&recall_scene_cmd);
-        esp_zb_lock_release();
-        */
-
-
-        /*
-        
-Kdyz nejsou v cilovem device sceny:
-0:42:31.402 -> Recalling scene 1
-20:42:31.425 -> [192832][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x8b
-20:42:31.425 -> [192834][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
-20:42:31.425 -> [192835][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Not found
-20:42:31.425 -> [192836][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
-20:42:31.425 -> Zigbee default response: resp_to_cmd=5 status=0x8B        
-
-
-kdzy tam jsou:
-20:44:11.728 -> Recalling scene 2
-20:44:11.793 -> [293189][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x0
-20:44:11.793 -> [293191][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
-20:44:11.793 -> [293192][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Success
-20:44:11.793 -> [293193][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
-20:44:11.793 -> Zigbee default response: resp_to_cmd=5 status=0x00
-
-Status response
-20:48:06.050 -> Getting light level
-20:48:06.050 -> [527481][V][ZigbeeHandlers.cpp:144] zb_cmd_read_attr_resp_handler(): Read attribute response: from address(0x3fe9) src endpoint(1) to dst endpoint(5) cluster(0x6)
-20:48:06.081 -> [527483][V][ZigbeeHandlers.cpp:153] zb_cmd_read_attr_resp_handler(): Read attribute response: status(0), cluster(0x6), attribute(0x0), type(0x10), value(0)
-https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ZigbeeHandlers.cpp#L154
-https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ep/ZigbeeColorDimmerSwitch.cpp#L829
-https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/src/ep/ZigbeeColorDimmerSwitch.h#L81
-
-https://github.com/espressif/arduino-esp32/blob/6cfa93f4b4e2c0e3cf492e4a45780bfbe757fcd4/libraries/Zigbee/examples/Zigbee_On_Off_Switch/Zigbee_On_Off_Switch.ino#L97C5-L103C43
-// Poll light state every second
-    static uint32_t lastPoll = 0;
-    if (millis() - lastPoll > 1000) {
-      lastPoll = millis();
-      zbSwitch.getLightState();
-    }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-  zbSwitch.onLightStateChange(onLightStateChange);
-
-
-  static void onLightStateChange(bool state) {
-  if (state != light_state) {
-    light_state = state;
-    Serial.printf("Light state changed to %d\r\n", state);
-  }
-}
-
-        */

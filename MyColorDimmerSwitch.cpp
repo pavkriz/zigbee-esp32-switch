@@ -2,6 +2,8 @@
 
 #if CONFIG_ZB_ENABLED
 
+#include <zcl/esp_zigbee_zcl_command.h>
+
 MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
     : ZigbeeColorDimmerSwitch(endpoint) {
   // Add Scenes cluster (client role) so the endpoint can legally send Scenes commands.
@@ -30,11 +32,40 @@ void MyColorDimmerSwitch::recallScene(uint8_t scene_id) {
   esp_zb_lock_release();
 }
 
+void MyColorDimmerSwitch::startDimming(bool up, uint8_t rate) {
+  esp_zb_zcl_level_move_cmd_t move_cmd;
+  memset(&move_cmd, 0, sizeof(move_cmd));
+
+  move_cmd.zcl_basic_cmd.src_endpoint = getEndpoint();
+  move_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+  move_cmd.move_mode = up ? 0x00 : 0x01;
+  move_cmd.rate = rate;
+
+  esp_zb_lock_acquire(portMAX_DELAY);
+  esp_zb_zcl_level_move_cmd_req(&move_cmd);
+  esp_zb_lock_release();
+}
+
+void MyColorDimmerSwitch::stopDimming() {
+  esp_zb_zcl_level_stop_cmd_t stop_cmd;
+  memset(&stop_cmd, 0, sizeof(stop_cmd));
+
+  stop_cmd.zcl_basic_cmd.src_endpoint = getEndpoint();
+  stop_cmd.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+
+  esp_zb_lock_acquire(portMAX_DELAY);
+  esp_zb_zcl_level_stop_cmd_req(&stop_cmd);
+  esp_zb_lock_release();
+}
+
 #else
 
 MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
     : ZigbeeColorDimmerSwitch(endpoint) {}
 
 void MyColorDimmerSwitch::recallScene(uint8_t /*scene_id*/) {}
+
+void MyColorDimmerSwitch::startDimming(bool /*up*/, uint8_t /*rate*/) {}
+void MyColorDimmerSwitch::stopDimming() {}
 
 #endif
