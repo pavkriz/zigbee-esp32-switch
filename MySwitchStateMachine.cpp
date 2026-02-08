@@ -117,9 +117,18 @@ void MySwitchStateMachine::tick() {
   // Button up shortcut to turn the light on to scene 2 immediatelly when it's off 
   // (do dot distinguish short/long press in this case, just turn on on press), to improve responsiveness.
   if (upWasPressed && !light_on_for_hold) {
+    Serial.println("Up button pressed while light is off, turning on to scene 2 immediately");
     handleShortUp(light_on_for_hold);
     _upPressed = false; // don't start long press dimming after this
-    _shortUpShortcutInProgress = true; // used to ignore the release event of this press
+    _shortcutUpInProgress = true; // used to ignore the release event of this press
+  }
+
+  // Button down shortcut to turn the light on to scene 1 immediately when it's off, to improve responsiveness.
+  if (downWasPressed && !light_on_for_hold) {
+    Serial.println("Down button pressed while light is off, turning on to scene 1 immediately");
+    handleShortDown(light_on_for_hold);
+    _downPressed = false; // don't start long press dimming after this
+    _shortcutDownInProgress = true; // used to ignore the release event of this press
   }
 
   // Start dimming on long press (only when light is considered ON).
@@ -159,10 +168,10 @@ void MySwitchStateMachine::tick() {
     if (_dimming == DimmingDirection::Up) {
       _sw.stopDimming();
       _dimming = DimmingDirection::None;
-    } else if (!wasLong && !_shortUpShortcutInProgress) {
+    } else if (!wasLong && !_shortcutUpInProgress) {
       handleShortUp(lightOnForDecision());
     }
-    _shortUpShortcutInProgress = false; // reset the flag after handling the release
+    _shortcutUpInProgress = false; // reset the flag after handling the release
   }
 
   if (downWasReleased) {
@@ -172,8 +181,9 @@ void MySwitchStateMachine::tick() {
     if (_dimming == DimmingDirection::Down) {
       _sw.stopDimming();
       _dimming = DimmingDirection::None;
-    } else if (!wasLong) {
+    } else if (!wasLong && !_shortcutDownInProgress) {
       handleShortDown(lightOnForDecision());
     }
+    _shortcutDownInProgress = false; // reset the flag after handling the release
   }
 }
