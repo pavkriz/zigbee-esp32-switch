@@ -18,28 +18,47 @@ void MySwitchStateMachine::setMoveRate(uint8_t rate) {
 
 void MySwitchStateMachine::onLightStateChange(bool on) {
   _lastKnownOn = on;
-  _lastKnownValid = true;
+  _lastKnownOnValid = true;
   _expectedOn = on;
 }
+
+void MySwitchStateMachine::onLightSceneChange(int sceneId) {
+  _lastKnownScene = sceneId;
+  _lastKnownSceneValid = true;
+  _expectedScene = sceneId;
+}
+
 bool MySwitchStateMachine::lightOnForDecision() const {
   // We rely on pushed updates, but keep _expectedOn as an optimistic fallback
   // so UX stays responsive while waiting for a report/response.
-  return _lastKnownValid ? _lastKnownOn : _expectedOn;
+  return _lastKnownOnValid ? _lastKnownOn : _expectedOn;
+}
+
+int MySwitchStateMachine::sceneForDecision() const {
+  return _lastKnownSceneValid ? _lastKnownScene : _expectedScene;
 }
 
 void MySwitchStateMachine::handleShortUp(bool light_on) {
-  // When off: short up recalls scene 1.
+  // When off: short up recalls scene 2.
   if (!light_on) {
-    _sw.recallScene(1);
+    _sw.recallScene(2);
+    _expectedScene = 2;
     _expectedOn = true;
   }
-  // When on: short up does nothing.
+  // When on: short up cycles through scenes 2 and 3
+  else {
+    int to_be_scene = sceneForDecision() + 1;
+    _sw.recallScene(to_be_scene);
+    _expectedScene = to_be_scene;
+    _expectedOn = true;
+  }
 }
 
 void MySwitchStateMachine::handleShortDown(bool light_on) {
   if (!light_on) {
-    // When off: short down recalls scene 2.
-    _sw.recallScene(2);
+    // When off: short down recalls scene 1.
+    _sw.recallScene(1);
+    _expectedScene = 1;
     _expectedOn = true;
     return;
   }
@@ -129,3 +148,13 @@ void MySwitchStateMachine::tick() {
     }
   }
 }
+
+
+/*
+
+9:39:40.528 -> [ 63882][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x8b
+09:39:40.528 -> [ 63884][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
+09:39:40.528 -> [ 63885][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Not found
+09:39:40.528 -> [ 63886][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
+09:39:40.551 -> Zigbee default response: resp_to_cmd=5 status=0x8B
+*/

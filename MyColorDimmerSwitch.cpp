@@ -1,7 +1,9 @@
 #include "MyColorDimmerSwitch.h"
 
 MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
-    : ZigbeeColorDimmerSwitch(endpoint) {
+    : PatchedZigbeeColorDimmerSwitch(endpoint) {
+  
+  _on_light_scene_change = nullptr;
   // Add Scenes cluster (client role) so the endpoint can legally send Scenes commands.
   // This must happen after the base class has created `_cluster_list`.
   if (_cluster_list != nullptr) {
@@ -52,4 +54,22 @@ void MyColorDimmerSwitch::stopDimming() {
   esp_zb_lock_acquire(portMAX_DELAY);
   esp_zb_zcl_level_stop_cmd_req(&stop_cmd);
   esp_zb_lock_release();
+}
+
+void MyColorDimmerSwitch::zbAttributeRead(
+    uint16_t cluster_id, const esp_zb_zcl_attribute_t *attribute,
+    uint8_t src_endpoint, esp_zb_zcl_addr_t src_address) {
+  // Keep the base class behavior (reporting/handling) intact.
+  PatchedZigbeeColorDimmerSwitch::zbAttributeRead(cluster_id, attribute, src_endpoint, src_address);
+
+  // Custom handling can be added here.
+  if (cluster_id == ESP_ZB_ZCL_CLUSTER_ID_SCENES) {
+    Serial.printf("Scene attribute read: id=0x%04X type=0x%02X\r\n", attribute->id, attribute->data.type);
+    if (attribute->id == ESP_ZB_ZCL_ATTR_SCENES_CURRENT_SCENE_ID && attribute->data.type == ESP_ZB_ZCL_ATTR_TYPE_U8) {
+      uint8_t light_scene = attribute->data.value ? *(uint8_t *)attribute->data.value : 0;
+      if (_on_light_scene_change) {
+        _on_light_scene_change(light_scene);
+      }
+    }
+  }
 }

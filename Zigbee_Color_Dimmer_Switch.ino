@@ -61,8 +61,13 @@ static void onZigbeeDefaultResponse(zb_cmd_type_t resp_to_cmd, esp_zb_zcl_status
 }
 
 static void onLightStateChange(bool state) {
-  Serial.printf("Light state %d\r\n", state);
+  Serial.printf("Light state changed to %d\r\n", state);
   switchStateMachine.onLightStateChange(state);
+}
+
+static void onLightSceneChange(int scene_id) {
+  Serial.printf("Light scene changed to %d\r\n", scene_id);
+  switchStateMachine.onLightSceneChange(scene_id);
 }
 
 /********************* Arduino functions **************************/
@@ -79,6 +84,7 @@ void setup() {
 
   zbSwitch.onDefaultResponse(onZigbeeDefaultResponse);
   zbSwitch.onLightStateChange(onLightStateChange);
+  zbSwitch.onLightSceneChange(onLightSceneChange);
 
   switchStateMachine.begin();
 
