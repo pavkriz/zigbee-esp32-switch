@@ -70,6 +70,11 @@ static void onLightSceneChange(int scene_id) {
   switchStateMachine.onLightSceneChange(scene_id);
 }
 
+static void onLightSceneNotFound() {
+  Serial.println("Scene not found on the light!");
+  switchStateMachine.onLightSceneNotFound();
+}
+
 /********************* Arduino functions **************************/
 void setup() {
   Serial.begin(115200);
@@ -85,6 +90,7 @@ void setup() {
   zbSwitch.onDefaultResponse(onZigbeeDefaultResponse);
   zbSwitch.onLightStateChange(onLightStateChange);
   zbSwitch.onLightSceneChange(onLightSceneChange);
+  zbSwitch.onLightSceneNotFound(onLightSceneNotFound);
 
   switchStateMachine.begin();
 

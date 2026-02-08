@@ -73,3 +73,20 @@ void MyColorDimmerSwitch::zbAttributeRead(
     }
   }
 }
+
+void MyColorDimmerSwitch::zbDefaultResponse(const esp_zb_zcl_cmd_default_resp_message_t *message) {
+  PatchedZigbeeColorDimmerSwitch::zbDefaultResponse(message);  // Call base class handler
+
+  Serial.printf("Default response received: dst_endpoint=%d resp_to_cmd=%d status=0x%02X\r\n",
+                message->info.dst_endpoint,
+                (int)message->resp_to_cmd,
+                (unsigned int)message->status_code);
+
+  if (message->info.dst_endpoint == getEndpoint() && message->resp_to_cmd == ESP_ZB_ZCL_CMD_SCENES_RECALL_SCENE && message->status_code == ESP_ZB_ZCL_STATUS_NOT_FOUND) {
+    Serial.println("Scene not found response received for Recall Scene command");
+    if (_on_light_scene_not_found) {
+      Serial.println("Invoking onLightSceneNotFound callback");
+      _on_light_scene_not_found();
+    }
+  }
+}

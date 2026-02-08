@@ -28,6 +28,22 @@ void MySwitchStateMachine::onLightSceneChange(int sceneId) {
   _expectedScene = sceneId;
 }
 
+void MySwitchStateMachine::onLightSceneNotFound() {
+  // leave _lastKnownScene unchanged, since the scene actually didn't change on the light
+  // start "cycle to scene 2 fallback" process when scene not found and scene more than 2 was recalled
+  if (_expectedScene > 2) {
+    Serial.println("Scene not found, falling back to scene 2");
+    _sw.recallScene(2);
+    _expectedScene = 2;
+  } else {
+    // else we have recalled scene 2 or 1 and it was not found,
+    // which means the light likely doesn't have scenes configured, so we can just turn it on as a fallback
+    Serial.println("Scene not found, turning on the light as a fallback");
+    _sw.lightOn();
+  }
+  _expectedOn = true;
+}
+
 bool MySwitchStateMachine::lightOnForDecision() const {
   // We rely on pushed updates, but keep _expectedOn as an optimistic fallback
   // so UX stays responsive while waiting for a report/response.
@@ -45,7 +61,8 @@ void MySwitchStateMachine::handleShortUp(bool light_on) {
     _expectedScene = 2;
     _expectedOn = true;
   }
-  // When on: short up cycles through scenes 2 and 3
+  // When on: short up cycles through scenes 2, 3, 4, ..., 2.
+  // If some scene does not exist, it falls back to scene 2, and then cycles from there; see onLightSceneNotFound().
   else {
     int to_be_scene = sceneForDecision() + 1;
     _sw.recallScene(to_be_scene);
@@ -148,13 +165,3 @@ void MySwitchStateMachine::tick() {
     }
   }
 }
-
-
-/*
-
-9:39:40.528 -> [ 63882][V][ZigbeeHandlers.cpp:458] zb_cmd_default_resp_handler(): Received default response: from address(0x3fe9), src_endpoint(1) to dst_endpoint(5), cluster(0x5) with status 0x8b
-09:39:40.528 -> [ 63884][V][ZigbeeEP.cpp:640] zbDefaultResponse(): Default response received for endpoint 5
-09:39:40.528 -> [ 63885][V][ZigbeeEP.cpp:641] zbDefaultResponse(): Status code: Not found
-09:39:40.528 -> [ 63886][V][ZigbeeEP.cpp:642] zbDefaultResponse(): Response to command: 5
-09:39:40.551 -> Zigbee default response: resp_to_cmd=5 status=0x8B
-*/

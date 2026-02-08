@@ -16,6 +16,7 @@ class MySwitchStateMachine {
   // Forward the Zigbee on/off attribute updates here.
   void onLightStateChange(bool on);
   void onLightSceneChange(int scene_id);
+  void onLightSceneNotFound();
 
   void setLongPressMs(uint16_t ms);
   void setMoveRate(uint8_t rate);

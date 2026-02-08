@@ -20,12 +20,20 @@ class MyColorDimmerSwitch : public PatchedZigbeeColorDimmerSwitch {
     _on_light_scene_change = callback;
   }
 
+  void onLightSceneNotFound(void (*callback)()) {
+    _on_light_scene_not_found = callback;
+  }
+
 
  protected:
   void (*_on_light_scene_change)(int);
+  void (*_on_light_scene_not_found)() = nullptr;
 
   void zbAttributeRead(uint16_t cluster_id,
                        const esp_zb_zcl_attribute_t *attribute,
                        uint8_t src_endpoint,
                        esp_zb_zcl_addr_t src_address) override;
+
+  void zbDefaultResponse(const esp_zb_zcl_cmd_default_resp_message_t *message) override;
+
 };
