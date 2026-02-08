@@ -60,11 +60,14 @@ void MySwitchStateMachine::handleShortUp(bool light_on) {
     _sw.recallScene(2);
     _expectedScene = 2;
     _expectedOn = true;
-  }
-  // When on: short up cycles through scenes 2, 3, 4, ..., 2.
-  // If some scene does not exist, it falls back to scene 2, and then cycles from there; see onLightSceneNotFound().
-  else {
-    int to_be_scene = sceneForDecision() + 1;
+  }  else {
+    // When on: short up cycles through scenes 2, 3, 4, ..., 2.
+    // If some scene does not exist, it falls back to scene 2, and then cycles from there; see onLightSceneNotFound().
+    // When cycling, be optimistic (use _expectedScene as current scene) and do not wait for the light to report the scene change, 
+    // to keep UX responsive (otherwise, some short presses may look be "missing" since we do not have a new scene reported yet).
+    // The onLightSceneNotFound (which does the cycle back to scene 2) response to command is much faster than waiting for the scene change report, 
+    // so cycling will work well.
+    int to_be_scene = _expectedScene + 1;
     _sw.recallScene(to_be_scene);
     _expectedScene = to_be_scene;
     _expectedOn = true;
@@ -117,7 +120,6 @@ void MySwitchStateMachine::tick() {
     handleShortUp(light_on_for_hold);
     _upPressed = false; // don't start long press dimming after this
     _shortUpShortcutInProgress = true; // used to ignore the release event of this press
-    Serial.println("Short up shortcut: turning on to scene 2 immediately without waiting for release");
   }
 
   // Start dimming on long press (only when light is considered ON).

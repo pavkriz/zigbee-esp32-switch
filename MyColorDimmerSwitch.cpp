@@ -15,6 +15,7 @@ MyColorDimmerSwitch::MyColorDimmerSwitch(uint8_t endpoint)
 }
 
 void MyColorDimmerSwitch::recallScene(uint8_t scene_id) {
+  Serial.printf("Recalling scene %d\r\n", scene_id);
   esp_zb_zcl_scenes_recall_scene_cmd_t recall_scene_cmd;
   memset(&recall_scene_cmd, 0, sizeof(recall_scene_cmd));
 
