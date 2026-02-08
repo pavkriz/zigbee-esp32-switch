@@ -48,6 +48,7 @@ class MySwitchStateMachine {
   int _expectedScene = 0;
   int _lastKnownScene = 0;
   bool _lastKnownSceneValid = false;
+  bool _shortUpShortcutInProgress = false;
 
   bool _upPressed = false;
   bool _downPressed = false;

@@ -109,9 +109,18 @@ void MySwitchStateMachine::tick() {
     _downPressMs = now_ms;
   }
 
-  // Start dimming on long press (only when light is considered ON).
   const bool light_on_for_hold = lightOnForDecision();
 
+  // Button up shortcut to turn the light on to scene 2 immediatelly when it's off 
+  // (do dot distinguish short/long press in this case, just turn on on press), to improve responsiveness.
+  if (upWasPressed && !light_on_for_hold) {
+    handleShortUp(light_on_for_hold);
+    _upPressed = false; // don't start long press dimming after this
+    _shortUpShortcutInProgress = true; // used to ignore the release event of this press
+    Serial.println("Short up shortcut: turning on to scene 2 immediately without waiting for release");
+  }
+
+  // Start dimming on long press (only when light is considered ON).
   if (_upPressed && upIsPressed && _dimming == DimmingDirection::None) {
     if (now_ms - _upPressMs >= _longPressMs) {
       if (light_on_for_hold) {
@@ -148,9 +157,10 @@ void MySwitchStateMachine::tick() {
     if (_dimming == DimmingDirection::Up) {
       _sw.stopDimming();
       _dimming = DimmingDirection::None;
-    } else if (!wasLong) {
+    } else if (!wasLong && !_shortUpShortcutInProgress) {
       handleShortUp(lightOnForDecision());
     }
+    _shortUpShortcutInProgress = false; // reset the flag after handling the release
   }
 
   if (downWasReleased) {
