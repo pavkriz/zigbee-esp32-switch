@@ -43,6 +43,7 @@
 
 /* Zigbee color dimmer switch configuration */
 #define SWITCH_ENDPOINT_NUMBER 5
+// RGB led, the order is GREEN, RED, BLUE
 #define WS2812_PIN 8
 #define FACTORY_RESET_LONG_PRESS_MS 5000
 uint8_t levelToBeSet = 0;
@@ -50,6 +51,7 @@ uint8_t levelToBeSet = 0;
 // BOOT button for factory reset (long press)
 Button btnBoot(BOOT_PIN);
 bool factoryResetArmed = false;
+bool wasConnected = false;
 
 // define user-controlled buttons
 Button btnUp(1);
@@ -114,28 +116,44 @@ void setup() {
     ESP.restart();
   }
 
-  Serial.println("Connecting to network");
-  while (!Zigbee.connected()) {
-    Serial.print(".");
-    delay(100);
+  Serial.println("Waiting for network connection...");
+
+
+  bool connected = Zigbee.connected();
+  if (!connected) {
+    rgbLedWrite(WS2812_PIN, 64, 255, 0);  // Yellow = not connected
   }
-  Serial.println();
 }
 
 void loop() {
-  switchStateMachine.tick();
+  // Check Zigbee network connection and show yellow LED when disconnected
+  bool connected = Zigbee.connected();
+  if (!connected && !factoryResetArmed && wasConnected) {
+    rgbLedWrite(WS2812_PIN, 64, 255, 0);  // Yellow = not connected
+  } else if (connected && !wasConnected && !factoryResetArmed) {
+    // Just (re)connected — turn off the yellow LED
+    rgbLedWrite(WS2812_PIN, 0, 0, 0);
+    Serial.println("Connected to Zigbee network");
+  }
+  wasConnected = connected;
+
+  // Only process user button inputs when connected to a Zigbee network
+  if (connected) {
+    switchStateMachine.tick();
+  }
+
 
   // Handle BOOT button for factory reset (long press)
   btnBoot.read();
   if (btnBoot.isPressed() && btnBoot.pressedFor(FACTORY_RESET_LONG_PRESS_MS) && !factoryResetArmed) {
     factoryResetArmed = true;
-    neopixelWrite(WS2812_PIN, 255, 0, 0);  // Light WS2812 red to confirm
+    rgbLedWrite(WS2812_PIN, 0, 255, 0);  // Light WS2812 red to confirm
     Serial.println("Factory reset armed! Release button to reset.");
   }
   if (btnBoot.wasReleased()) {
     if (factoryResetArmed) {
       Serial.println("Performing Zigbee factory reset...");
-      neopixelWrite(WS2812_PIN, 0, 0, 0);  // Turn off LED
+      rgbLedWrite(WS2812_PIN, 0, 0, 0);  // Turn off LED
       factoryResetArmed = false;
       Zigbee.factoryReset(true);
     }
