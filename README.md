@@ -1,68 +1,42 @@
-# Arduino-ESP32 Zigbee Color Dimmer Switch Example
+# Arduino-ESP32 Zigbee Dimmer Switch with Scenes Support
 
-This example shows how to configure Zigbee Coordinator and use it as a Home Automation (HA) color dimmer light switch.
+This project is based on [Arduino-ESP32 Zigbee Color Dimmer Switch Examples](https://github.com/espressif/arduino-esp32/tree/master/libraries/Zigbee/examples/Zigbee_Color_Dimmer_Switch).
 
-# Supported Targets
+It adds scene switching and smart control based on current light state.
 
-Currently, this example supports the following targets.
+It is expected the Switch is bound to a Light (genOnOff, genLevelCtrl, genScenes) via Zigbee2MQTT and vice versa, ie. the Light is bound to the Switch (genOnOff, genLevelCtrl, genScenes) for switch to get notified about the light's state (possibly change by another remote control).
 
-| Supported Targets | ESP32-C6 | ESP32-H2 |
-| ----------------- | -------- | -------- |
+It was tester with [ESP32-H2-Zero Board](https://www.waveshare.com/wiki/ESP32-H2-Zero) and IKEA STOFTMOLN light.
 
-## Hardware Required
+Press onboard BOOT button for more then 5s (wait for the red onboard LED to light up) and ther release to perform the factory reset. Then, the onboard LED will be yellow unless paired and connected to an existing Zigbee network (e.g. via Zigbee2MQTT).
 
-* One development board (ESP32-H2 or ESP32-C6) acting as Zigbee end device (loaded with Zigbee_Color_Dimmable_Light example).
-* A USB cable for power supply and programming.
-* Choose another board (ESP32-H2 or ESP32-C6) as Zigbee coordinator and upload the Zigbee_Color_Dimmable_Light example.
+## Control logic
 
-### Configure the Project
+| Button vs. State   | Light is Off         | Light is On          |
+|--------------------|----------------------|----------------------|
+| **Short Up**       | Turn on to scene 2   | Cycle to next scene* |
+| **Short Down**     | Turn on to scene 1   | Turn off             |
+| **Long Up**        | Interpreted as short | Dim brighter         |
+| **Long Down**      | Interpreted as short | Dim darker           |
 
-Set the Button Switch GPIO by changing the `GPIO_SWITCH` definition. By default, it's the pin `9` (BOOT button on ESP32-C6 and ESP32-H2).
+*On short up press, the switch tries to recall scene ID+1 ID on the light. If the light responses with "not found" (meaning there is no scene eg. ID 4), the switch recalls the scene ID 2. This way, the switch cycles among scenes 2..N defined in the light.
 
-#### Using Arduino IDE
+Scenes IDs are meant to be like this:
+1) Dark (night) mode
+2) Main scene
+3) Next main scene (eg. most bright)
+4) Next auxiliary scene,...
+5) ...
 
-To get more information about the Espressif boards see [Espressif Development Kits](https://www.espressif.com/en/products/devkits).
+At least scenes ID 1 and 2 should be defined in the light.
 
-* Before Compile/Verify, select the correct board: `Tools -> Board`.
+## Using Arduino IDE
+
+Before Compile/Verify:
+* Install `JC_Button` library.
+* Select the correct board: `Tools -> Board`; tested with `ESP32H2 Dev Module` setting.
+* Select integrated USB serial: `Tools -> USB CDC On Boot: enabled`.
 * Select the Coordinator Zigbee mode: `Tools -> Zigbee mode: Zigbee ZCZR (coordinator/router)`.
 * Select Partition Scheme for Zigbee: `Tools -> Partition Scheme: Zigbee 4MB with spiffs`.
-* Select the COM port: `Tools -> Port: xxx where the `xxx` is the detected COM port.
+* Select the COM port: `Tools -> Port: xxx` where the `xxx` is the detected COM port.
 * Optional: Set debug level to verbose to see all logs from Zigbee stack: `Tools -> Core Debug Level: Verbose`.
-
-## Troubleshooting
-
-If the End device flashed with the example `Zigbee_Color_Dimmable_Light` is not connecting to the coordinator, erase the flash of the End device before flashing the example to the board. It is recommended to do this if you re-flash the coordinator.
-You can do the following:
-
-* In the Arduino IDE go to the Tools menu and set `Erase All Flash Before Sketch Upload` to `Enabled`.
-* Add to the sketch `Zigbee.factoryReset();` to reset the device and Zigbee stack.
-
-By default, the coordinator network is closed after rebooting or flashing new firmware.
-To open the network you have 2 options:
-
-* Open network after reboot by setting `Zigbee.setRebootOpenNetwork(time);` before calling `Zigbee.begin();`.
-* In application you can anytime call `Zigbee.openNetwork(time);` to open the network for devices to join.
-
-***Important: Make sure you are using a good quality USB cable and that you have a reliable power source***
-
-* **LED not blinking:** Check the wiring connection and the IO selection.
-* **Programming Fail:** If the programming/flash procedure fails, try reducing the serial connection speed.
-* **COM port not detected:** Check the USB cable and the USB to Serial driver installation.
-
-If the error persists, you can ask for help at the official [ESP32 forum](https://esp32.com) or see [Contribute](#contribute).
-
-## Contribute
-
-To know how to contribute to this project, see [How to contribute.](https://github.com/espressif/arduino-esp32/blob/master/CONTRIBUTING.rst)
-
-If you have any **feedback** or **issue** to report on this example/library, please open an issue or fix it by creating a new PR. Contributions are more than welcome!
-
-Before creating a new issue, be sure to try Troubleshooting and check if the same issue was already created by someone else.
-
-## Resources
-
-* Official ESP32 Forum: [Link](https://esp32.com)
-* Arduino-ESP32 Official Repository: [espressif/arduino-esp32](https://github.com/espressif/arduino-esp32)
-* ESP32-C6 Datasheet: [Link to datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-c6_datasheet_en.pdf)
-* ESP32-H2 Datasheet: [Link to datasheet](https://www.espressif.com/sites/default/files/documentation/esp32-h2_datasheet_en.pdf)
-* Official ESP-IDF documentation: [ESP-IDF](https://idf.espressif.com)
