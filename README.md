@@ -10,6 +10,8 @@ It was tester with [ESP32-H2-Zero Board](https://www.waveshare.com/wiki/ESP32-H2
 
 Press onboard BOOT button for more then 5s (wait for the red onboard LED to light up) and ther release to perform the factory reset. Then, the onboard LED will be yellow unless paired and connected to an existing Zigbee network (e.g. via Zigbee2MQTT).
 
+Note: The project was not tested battery-powered. It is not low-power optimized in current setup. It is intended to be supplied from low-voltage or main-to-low-voltage DC-DC power supply.
+
 ## Control logic
 
 | Button vs. State   | Light is Off         | Light is On          |
