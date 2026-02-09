@@ -43,8 +43,13 @@
 
 /* Zigbee color dimmer switch configuration */
 #define SWITCH_ENDPOINT_NUMBER 5
-uint8_t button = BOOT_PIN;
+#define WS2812_PIN 8
+#define FACTORY_RESET_LONG_PRESS_MS 5000
 uint8_t levelToBeSet = 0;
+
+// BOOT button for factory reset (long press)
+Button btnBoot(BOOT_PIN);
+bool factoryResetArmed = false;
 
 // define user-controlled buttons
 Button btnUp(1);
@@ -79,8 +84,11 @@ static void onLightSceneNotFound() {
 void setup() {
   Serial.begin(115200);
 
-  //Init button switch
-  pinMode(button, INPUT_PULLUP);
+  // Ensure WS2812 LED is off at startup
+  neopixelWrite(WS2812_PIN, 0, 0, 0);
+
+  // Init BOOT button for factory reset
+  btnBoot.begin();
 
   //Optional: set Zigbee device name and model
   zbSwitch.setManufacturerAndModel("Espressif", "ZigbeeSwitchDim");
@@ -117,14 +125,20 @@ void setup() {
 void loop() {
   switchStateMachine.tick();
 
-  // Handle button switch in loop()
-  if (digitalRead(button) == LOW) {  // Push button pressed
-    // Key debounce handling
-    while (digitalRead(button) == LOW) {
-      delay(50);
+  // Handle BOOT button for factory reset (long press)
+  btnBoot.read();
+  if (btnBoot.isPressed() && btnBoot.pressedFor(FACTORY_RESET_LONG_PRESS_MS) && !factoryResetArmed) {
+    factoryResetArmed = true;
+    neopixelWrite(WS2812_PIN, 255, 0, 0);  // Light WS2812 red to confirm
+    Serial.println("Factory reset armed! Release button to reset.");
+  }
+  if (btnBoot.wasReleased()) {
+    if (factoryResetArmed) {
+      Serial.println("Performing Zigbee factory reset...");
+      neopixelWrite(WS2812_PIN, 0, 0, 0);  // Turn off LED
+      factoryResetArmed = false;
+      Zigbee.factoryReset(true);
     }
-    // Toggle light
-    zbSwitch.lightToggle();
   }
   // Handle serial input to control color and level of the light
   if (Serial.available()) {
