@@ -4,13 +4,22 @@ This project is based on [Arduino-ESP32 Zigbee Color Dimmer Switch Examples](htt
 
 It adds scene switching and smart control based on current light state.
 
-It is expected the Switch is bound to a Light (genOnOff, genLevelCtrl, genScenes) via Zigbee2MQTT and vice versa, ie. the Light is bound to the Switch (genOnOff, genLevelCtrl, genScenes) for switch to get notified about the light's state (possibly change by another remote control).
+It is expected you will bind the Switch to a Light (genOnOff, genLevelCtrl, genScenes) via Zigbee2MQTT and vice versa, ie. the Light will be bound to the Switch (genOnOff, genLevelCtrl, genScenes) for switch to get notified about the light's state (possible change by another remote control).
 
-It was tester with [ESP32-H2-Zero Board](https://www.waveshare.com/wiki/ESP32-H2-Zero) and IKEA STOFTMOLN light.
+It was tested with [ESP32-H2-Zero Board](https://www.waveshare.com/wiki/ESP32-H2-Zero) and [IKEA STOFTMOLN light](https://www.zigbee2mqtt.io/devices/T2037.html#ikea-t2037) and [IKEA TRADFRI bulb E12/E14](https://www.zigbee2mqtt.io/devices/LED2101G4.html).
 
-Press onboard BOOT button for more then 5s (wait for the red onboard LED to light up) and ther release to perform the factory reset. Then, the onboard LED will be yellow unless paired and connected to an existing Zigbee network (e.g. via Zigbee2MQTT).
+Press onboard BOOT button for more then 5s (wait for the red onboard LED to light up) and then release to perform the factory reset. Then, the onboard LED will be yellow unless paired and connected to an existing Zigbee network (e.g. via Zigbee2MQTT).
 
-Note: The project was not tested battery-powered. It is not low-power optimized in current setup. It is intended to be supplied from low-voltage or main-to-low-voltage DC-DC power supply.
+Note: The project was not tested battery-powered. It is not low-power optimized in current setup. It is intended to be supplied from low-voltage line or mains-line-to-low-voltage DC-DC power supply (such as those from Hi-Link Electronic). Currently it consumes approx. 40mA from 5V (baseline current, measured with ordinary multimeter; there will be higher spikes during transmission probably)
+
+## Pinout
+
+| Pin        | Function             |
+|------------|----------------------|
+| GPIO1      | Up button (to GND)   |
+| GPIO2      | Down button (to GND) |
+| GPIO9/BOOT | Onboard BOOT button  |
+| GPIO8      | Onboard WS2812 LED   |
 
 ## Control logic
 
@@ -21,7 +30,7 @@ Note: The project was not tested battery-powered. It is not low-power optimized 
 | **Long Up**        | Interpreted as short | Dim brighter         |
 | **Long Down**      | Interpreted as short | Dim darker           |
 
-*On short up press, the switch tries to recall scene ID+1 ID on the light. If the light responses with "not found" (meaning there is no scene eg. ID 4), the switch recalls the scene ID 2. This way, the switch cycles among scenes 2..N defined in the light.
+*On short up press, the switch tries to recall scene ID+1 on the light. If the light responses with "not found" (meaning there is no scene eg. ID 4), the switch recalls the scene ID 2. This way, the switch cycles among scenes 2..N defined in the light.
 
 Scenes IDs are meant to be like this:
 1) Dark (night) mode
@@ -31,6 +40,15 @@ Scenes IDs are meant to be like this:
 5) ...
 
 At least scenes ID 1 and 2 should be defined in the light.
+
+
+## Identify
+
+To invoke Identify command, use Device's Dev Console in Zigbee2MQTT.  
+Unfortunatelly Zigbee2MQTT will not show "Identify" button on Device's Exposes tab.
+Use 'Write attributes to endpoint' on Dev Console tab. Set endpoint number `1`, cluster `genIdentify`, attribute `identifyTime` and any number of seconds (eg. 5) to value. 
+The device will blink onboard LED green for specified number of seconds.
+
 
 ## Using Arduino IDE
 

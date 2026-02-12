@@ -42,7 +42,7 @@
 #include "MySwitchStateMachine.h"
 
 /* Zigbee color dimmer switch configuration */
-#define SWITCH_ENDPOINT_NUMBER 5
+#define SWITCH_ENDPOINT_NUMBER 1
 // RGB led, the order is GREEN, RED, BLUE
 #define WS2812_PIN 8
 #define FACTORY_RESET_LONG_PRESS_MS 5000
@@ -82,12 +82,33 @@ static void onLightSceneNotFound() {
   switchStateMachine.onLightSceneNotFound();
 }
 
+void identify(uint16_t time) {
+  static uint8_t blink = 1;
+  log_d("Identify called for %d seconds", time);
+  if (time == 0) {
+    // If identify time is 0, stop blinking
+    rgbLedWrite(WS2812_PIN, 0, 0, 0);
+    blink = 1;  // next time identify is called, it should start with LED on
+    return;
+  }
+  rgbLedWrite(WS2812_PIN, 255 * blink, 0, 0);  // toggle green LED on and off to indicate identify
+  blink = !blink;
+}
+
 /********************* Arduino functions **************************/
 void setup() {
   Serial.begin(115200);
 
   // Ensure WS2812 LED is off at startup
   neopixelWrite(WS2812_PIN, 0, 0, 0);
+
+  // rapidly blink the LED to indicate startup
+  for (int i = 0; i < 5; i++) {
+    neopixelWrite(WS2812_PIN, 255, 255, 255);
+    delay(100);
+    neopixelWrite(WS2812_PIN, 0, 0, 0);
+    delay(100);
+  }
 
   // Init BOOT button for factory reset
   btnBoot.begin();
@@ -96,7 +117,7 @@ void setup() {
   zbSwitch.setManufacturerAndModel("Espressif", "ZigbeeSwitchDim");
   zbSwitch.setPowerSource(ZB_POWER_SOURCE_MAINS);
 
-
+  zbSwitch.onIdentify(identify);
   zbSwitch.onDefaultResponse(onZigbeeDefaultResponse);
   zbSwitch.onLightStateChange(onLightStateChange);
   zbSwitch.onLightSceneChange(onLightSceneChange);
