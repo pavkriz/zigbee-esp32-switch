@@ -16,8 +16,8 @@ Note: The project was not tested battery-powered. It is not low-power optimized 
 
 | Pin        | Function             |
 |------------|----------------------|
-| GPIO1      | Up button (to GND)   |
-| GPIO2      | Down button (to GND) |
+| GPI11      | Up button (to GND)   |
+| GPI10      | Down button (to GND) |
 | GPIO9/BOOT | Onboard BOOT button  |
 | GPIO8      | Onboard WS2812 LED   |
 

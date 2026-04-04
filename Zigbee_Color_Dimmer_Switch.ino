@@ -43,7 +43,15 @@
 
 /* Zigbee color dimmer switch configuration */
 #define SWITCH_ENDPOINT_NUMBER 1
-// RGB led, the order is GREEN, RED, BLUE
+// RGB LED, 
+//    the order is GREEN, RED, BLUE on Waweshare Zero board, 
+//    and RED, GREEN, BLUE on Super Mini board.
+//#define IS_WAWESHARE_ZERO_BOARD // comment out the above line if you are using Super Mini board, and uncomment it if you are using Waweshare Zero board
+#ifdef IS_WAWESHARE_ZERO_BOARD
+#define myNeopixelWrite(pin, r, g, b) neopixelWrite(pin, g, r, b)
+#else
+#define myNeopixelWrite(pin, r, g, b) neopixelWrite(pin, r, g, b)
+#endif
 #define WS2812_PIN 8
 #define FACTORY_RESET_LONG_PRESS_MS 5000
 uint8_t levelToBeSet = 0;
@@ -54,8 +62,8 @@ bool factoryResetArmed = false;
 bool wasConnected = false;
 
 // define user-controlled buttons
-Button btnUp(1);
-Button btnDown(2);
+Button btnUp(11);
+Button btnDown(10);
 
 /* Zigbee switch */
 MyColorDimmerSwitch zbSwitch = MyColorDimmerSwitch(SWITCH_ENDPOINT_NUMBER);
@@ -87,11 +95,11 @@ void identify(uint16_t time) {
   log_d("Identify called for %d seconds", time);
   if (time == 0) {
     // If identify time is 0, stop blinking
-    rgbLedWrite(WS2812_PIN, 0, 0, 0);
+    myNeopixelWrite(WS2812_PIN, 0, 0, 0);
     blink = 1;  // next time identify is called, it should start with LED on
     return;
   }
-  rgbLedWrite(WS2812_PIN, 255 * blink, 0, 0);  // toggle green LED on and off to indicate identify
+  myNeopixelWrite(WS2812_PIN, 0, 255 * blink, 0);  // toggle green LED on and off to indicate identify
   blink = !blink;
 }
 
@@ -100,13 +108,13 @@ void setup() {
   Serial.begin(115200);
 
   // Ensure WS2812 LED is off at startup
-  neopixelWrite(WS2812_PIN, 0, 0, 0);
+  myNeopixelWrite(WS2812_PIN, 0, 0, 0);
 
   // rapidly blink the LED to indicate startup
   for (int i = 0; i < 5; i++) {
-    neopixelWrite(WS2812_PIN, 255, 255, 255);
+    myNeopixelWrite(WS2812_PIN, 64, 64, 64);
     delay(100);
-    neopixelWrite(WS2812_PIN, 0, 0, 0);
+    myNeopixelWrite(WS2812_PIN, 0, 0, 0);
     delay(100);
   }
 
@@ -142,7 +150,7 @@ void setup() {
 
   bool connected = Zigbee.connected();
   if (!connected) {
-    rgbLedWrite(WS2812_PIN, 64, 255, 0);  // Yellow = not connected
+    myNeopixelWrite(WS2812_PIN, 32, 128, 0);  // Yellow = not connected
   }
 }
 
@@ -150,10 +158,10 @@ void loop() {
   // Check Zigbee network connection and show yellow LED when disconnected
   bool connected = Zigbee.connected();
   if (!connected && !factoryResetArmed && wasConnected) {
-    rgbLedWrite(WS2812_PIN, 64, 255, 0);  // Yellow = not connected
+    myNeopixelWrite(WS2812_PIN, 32, 128, 0);  // Yellow = not connected
   } else if (connected && !wasConnected && !factoryResetArmed) {
     // Just (re)connected — turn off the yellow LED
-    rgbLedWrite(WS2812_PIN, 0, 0, 0);
+    myNeopixelWrite(WS2812_PIN, 0, 0, 0);
     Serial.println("Connected to Zigbee network");
   }
   wasConnected = connected;
@@ -168,13 +176,13 @@ void loop() {
   btnBoot.read();
   if (btnBoot.isPressed() && btnBoot.pressedFor(FACTORY_RESET_LONG_PRESS_MS) && !factoryResetArmed) {
     factoryResetArmed = true;
-    rgbLedWrite(WS2812_PIN, 0, 255, 0);  // Light WS2812 red to confirm
+    myNeopixelWrite(WS2812_PIN, 128, 0, 0);  // Light WS2812 red to confirm
     Serial.println("Factory reset armed! Release button to reset.");
   }
   if (btnBoot.wasReleased()) {
     if (factoryResetArmed) {
       Serial.println("Performing Zigbee factory reset...");
-      rgbLedWrite(WS2812_PIN, 0, 0, 0);  // Turn off LED
+      myNeopixelWrite(WS2812_PIN, 0, 0, 0);  // Turn off LED
       factoryResetArmed = false;
       Zigbee.factoryReset(true);
     }
