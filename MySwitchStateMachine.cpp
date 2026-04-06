@@ -20,6 +20,9 @@ void MySwitchStateMachine::onLightStateChange(bool on) {
   _lastKnownOn = on;
   _lastKnownOnValid = true;
   _expectedOn = on;
+  if (on) {
+    _downForcedOffArmed = false;
+  }
 }
 
 void MySwitchStateMachine::onLightSceneChange(int sceneId) {
@@ -124,9 +127,19 @@ void MySwitchStateMachine::tick() {
   }
 
   // Button down shortcut to turn the light on to scene 1 immediately when it's off, to improve responsiveness.
+  // If down was already pressed recently (armed) and light never reported on, force a lightOff instead.
   if (downWasPressed && !light_on_for_hold) {
-    Serial.println("Down button pressed while light is off, turning on to scene 1 immediately");
-    handleShortDown(light_on_for_hold);
+    if (_downForcedOffArmed && (now_ms - _downForcedOffArmMs < 5000)) {
+      Serial.println("Down button pressed twice while light appears off, forcing lightOff");
+      _sw.lightOff();
+      _expectedOn = false;
+      _downForcedOffArmed = false;
+    } else {
+      Serial.println("Down button pressed while light is off, turning on to scene 1 immediately");
+      handleShortDown(light_on_for_hold);
+      _downForcedOffArmed = true;
+      _downForcedOffArmMs = now_ms;
+    }
     _downPressed = false; // don't start long press dimming after this
     _shortcutDownInProgress = true; // used to ignore the release event of this press
   }

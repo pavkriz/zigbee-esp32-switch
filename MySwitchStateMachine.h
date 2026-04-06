@@ -51,6 +51,9 @@ class MySwitchStateMachine {
   bool _shortcutUpInProgress = false;
   bool _shortcutDownInProgress = false;
 
+  bool _downForcedOffArmed = false;
+  uint32_t _downForcedOffArmMs = 0;
+
   bool _upPressed = false;
   bool _downPressed = false;
   uint32_t _upPressMs = 0;
