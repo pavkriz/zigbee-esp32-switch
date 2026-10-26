@@ -118,6 +118,8 @@ void setup() {
     delay(100);
   }
 
+  myNeopixelWrite(WS2812_PIN, 64, 64, 64);  // leave the led white
+
   // Init BOOT button for factory reset
   btnBoot.begin();
 
@@ -257,6 +259,15 @@ void loop() {
     } else {
       Serial.println("Unknown command");
     }
+  }
+
+  // Blink LED blue every 1 second
+  static uint32_t last_blink = 0;
+  static bool blink_state = false;
+  if (millis() - last_blink > 1000) {
+    last_blink = millis();
+    blink_state = !blink_state;
+    myNeopixelWrite(WS2812_PIN, 0, 0, blink_state ? 1 : 0);
   }
 
   // print the bound devices (lights) every 30 seconds
